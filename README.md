@@ -1,5 +1,7 @@
 # sinpol
 This python package provides a tool to model the neutron transmission  Bragg edge of pollycrystalline materials starting from a single to an ensemble crystal.  The model would allow the use of energy-resolved neutron transmission for the analysis of single crystals, polycrystals, andoligocrystals (materials composed by a relatively small number of crystals).
+
+
 **Main functionality:** given lattice structure of a material, number of grains in distribution, mosaic distribution, grain size distribution, and optionally a texture model,
 calculate neutron transmisison spectrum as a function of neutron wavelength.
 ## Features
