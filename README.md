@@ -13,6 +13,6 @@ calculate neutron transmisison spectrum as a function of neutron wavelength.
   - Reuss model
   - Eshelby-Kroner model
   - Hill Model
-* Flexible design to allow future extension to texture and peak profile models
+* Flexible design to allow future extension to texture, more complex stress-strain models, and peak profile models
 * Allow easy fitting to measured Bragg Edge data
 
