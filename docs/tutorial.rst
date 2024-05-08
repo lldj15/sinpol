@@ -123,7 +123,7 @@ Calculate Neutron Transmision::
 
   trans=ScatteringCalc(samp,hkl,lattice,atp,cryn,absnxs,Tdsspnxs,Tdsmpnxs,strain,a).transmission()
   plt.figure()
-  plt.plot(w,trans)
+  plt.plot(w,1-trans)
   plt.xlim(1.0,4.0)
 
 This plot reproduces Figure 6a of https://doi.org/10.1063/1.5002102:
