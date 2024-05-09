@@ -285,7 +285,7 @@ for a recrystralyzed  Aluminum sample , the euler distribution for this example 
 
   This above code  reproduces Figure 9d  of https://doi.org/10.1016/j.nimb.2019.09.010: 
 
-  .. image:: img/Aleulerdistribution.png
+.. image:: img/Aleulerdistribution.png
  
 Polycrystal (Loading Pole Figures)
 ----------------------------------
