@@ -257,6 +257,39 @@ This above code  reproduces Figure 2d  of https://doi.org/10.1016/j.nimb.2019.09
 
 .. image:: img/poly_text.png
 
+Polycrystal (Loading ODF or Pole figure)
+----------
+Sinpol has the ability to model the neutron transmsision for a sample by providing an ODF in terms of Bunge Euler angles in degrees.  The ODF can be provided as .txt file. Here we present the simulation
+for a recrystralyzed  Aluminum sample , the euler distribution for this example can be found in the recrystEuler.txt file in the data folder.
+
+from sinpol import crystaldata as cds
+  xtal=cds.CrystalData('Al',4.049,4.049,4.049,90,90,90,410,'Fm-3m')
+  lattice=xtal.cstructure(6,36)[0]
+  atp=xtal.cstructure(6,36)[1]
+  hkl=xtal.cstructure(6,36)[2]
+  cryn=xtal.neutronics.dat
+  w = np.arange(1, 5, 0.01)
+  absnxs=xtal.nxs.nxsAbsorption(w)
+  Tdsspnxs=xtal.nxs.nxsTdssp(w)
+  Tdsmpnxs=xtal.nxs.nxsTdsmp(w)
+
+  ptcm=1           # in cm
+  grainsize=1      # in microns
+  orn=1000000      #  number of crystal orientation
+  psi=0                   #  angles in lab frame
+  omega=0                 #  angles in lab frame
+  mosaic=.5               #  fwhm for mosaic in degrees
+  gdist='uniform'         #  should be singlecrystal for single crystal 'singlecrystal'
+  mdist= 'uniform'        #  choices are weibull, gaussian ,log_normal, and uniform
+  gdev=5                  #  std for grain distribution
+  create sample by passing the distribution file  to the sampledata  class  sd.SampleData(0,0,ptcm,grainsize,orn,.5).polycrystalloadodf('uniform','uniform',5,.2,"recrystEuler.txt")[0]
+
+  This above code  reproduces Figure 9d  of https://doi.org/10.1016/j.nimb.2019.09.010: 
+  
+ 
+Polycrystal (Loading Pole Figures)
+----------
+
 Elastic Strain  
 ----------
 In this section  we  simulate the influence of elastic strain on the neutron transmission pattern of  a Inconel 718  single crystal and Inconel 718  powder:
