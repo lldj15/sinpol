@@ -284,11 +284,12 @@ for a recrystralyzed  Aluminum sample , the euler distribution for this example 
   create sample by passing the distribution file  to the sampledata  class  sd.SampleData(0,0,ptcm,grainsize,orn,.5).polycrystalloadodf('uniform','uniform',5,.2,"recrystEuler.txt")[0]
 
 This above code  reproduces Figure 9d  of https://doi.org/10.1016/j.nimb.2019.09.010: 
-.. image:: img/Aleulerdistribution.png
+  .. image:: img/Aleulerdistribution.png
  
 Polycrystal (Loading Pole Figures)
 ----------------------------------
 Similarly  the transmission can be modeled for pole figures measured from diffraction measurement, the file allpole.txt found in the data folder are all the pole for a deform Aluminum sample measured at the VULCAN beamline.::
+
   from sinpol import crystaldata as cds
   xtal=cds.CrystalData('Al',4.049,4.049,4.049,90,90,90,410,'Fm-3m')
   lattice=xtal.cstructure(6,36)[0]
@@ -309,7 +310,9 @@ Similarly  the transmission can be modeled for pole figures measured from diffra
   gdist='uniform'         #  should be singlecrystal for single crystal 'singlecrystal'
   mdist= 'uniform'        #  choices are weibull, gaussian ,log_normal, and uniform
   gdev=5                  #  std for grain distribution
-  The sample is created  by passing the pole figures file  to the sampledata  class using sd.SampleData(0,0,ptcm,grainsize,orn,.5).polycrystalfrompolefigures('uniform','uniform',5,.2,'fcc',mtxe,filen,"allpole")[0] where mtxe is the path to the Matlab mtex librabry and similar filen is the path to the Matlab file that will calculate the ODF.  The above code reproduces Figure 8d  of https://doi.org/10.1016/j.nimb.2019.09.010: 
+The sample is created  by passing the pole figures file  to the sampledata  class using sd.SampleData(0,0,ptcm,grainsize,orn,.5).polycrystalfrompolefigures('uniform','uniform',5,.2,'fcc',mtxe,filen,"allpole")[0] where mtxe is the path to the Matlab mtex librabry and similar filen is the path to the Matlab file that will calculate the ODF. 
+
+The above code reproduces Figure 8d  of https://doi.org/10.1016/j.nimb.2019.09.010: 
 
   .. image:: img/Alpolefigures.png
 Elastic Strain  
