@@ -177,7 +177,7 @@ This plot reproduces Figure 1a of https://doi.org/10.1016/j.nimb.2019.09.010:
 .. image:: img/singlehkl.png
 
 Polycrystal (Random texture)
-----------
+-----------------------------
 
  Here we consider an isotropic fcc Cu sample, and the following code computes and reproduces Figure 7 of https://doi.org/10.1063/1.5002102::
 
