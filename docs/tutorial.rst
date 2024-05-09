@@ -176,7 +176,6 @@ This plot reproduces Figure 1a of https://doi.org/10.1016/j.nimb.2019.09.010:
 
 .. image:: img/singlehkl.png
 
-
 Polycrystal (Random texture)
 ----------
 
