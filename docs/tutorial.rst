@@ -284,6 +284,7 @@ for a recrystralyzed  Aluminum sample , the euler distribution for this example 
   create sample by passing the distribution file  to the sampledata  class  sd.SampleData(0,0,ptcm,grainsize,orn,.5).polycrystalloadodf('uniform','uniform',5,.2,"recrystEuler.txt")[0]
 
   This above code  reproduces Figure 9d  of https://doi.org/10.1016/j.nimb.2019.09.010: 
+
   .. image:: img/Aleulerdistribution.png
  
 Polycrystal (Loading Pole Figures)
@@ -315,9 +316,11 @@ Similarly  the transmission can be modeled for pole figures measured from diffra
 
 The above code reproduces Figure 8d  of https://doi.org/10.1016/j.nimb.2019.09.010: 
 
-  .. image:: img/Alpolefigures.png
+.. image:: img/Alpolefigures.png
+
+
 Elastic Strain  
-----------
+--------------
 In this section  we  simulate the influence of elastic strain on the neutron transmission pattern of  a Inconel 718  single crystal and Inconel 718  powder:
  
 The code below demonstrates how to apply a 352 MPa stress parralel to the Q vector  for a single crystal and calculate the lattcie strain.::
