@@ -260,9 +260,9 @@ This above code  reproduces Figure 2d  of https://doi.org/10.1016/j.nimb.2019.09
 Polycrystal (Loading ODF or Pole figure)
 ----------
 Sinpol has the ability to model the neutron transmsision for a sample by providing an ODF in terms of Bunge Euler angles in degrees.  The ODF can be provided as .txt file. Here we present the simulation
-for a recrystralyzed  Aluminum sample , the euler distribution for this example can be found in the recrystEuler.txt file in the data folder.
+for a recrystralyzed  Aluminum sample , the euler distribution for this example can be found in the recrystEuler.txt file in the data folder.::
 
-from sinpol import crystaldata as cds
+  from sinpol import crystaldata as cds
   xtal=cds.CrystalData('Al',4.049,4.049,4.049,90,90,90,410,'Fm-3m')
   lattice=xtal.cstructure(6,36)[0]
   atp=xtal.cstructure(6,36)[1]
