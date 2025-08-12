@@ -10,7 +10,6 @@ warnings.simplefilter(action='ignore', category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 class TestStressStrainModels():
-    
     def test_voigt_single_trans(self):
         ptcm=1 # in cm
         grainsize=1e4 # in microns
