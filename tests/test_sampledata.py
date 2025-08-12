@@ -3,10 +3,8 @@ import pytest
 import warnings
 import numpy as np
 from sinpol import sampledata as sd
-
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 warnings.filterwarnings("ignore")
-
 class TestSampleData():
     
     def test_singlecrystaldeg(self):
