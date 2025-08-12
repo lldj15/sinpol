@@ -224,4 +224,3 @@ _atom_site_fract_x
 _atom_site_fract_y
 _atom_site_fract_z
 Cu   0.00000   0.00000   0.00000
-
