@@ -8,12 +8,13 @@ calculate neutron transmisison spectrum as a function of neutron wavelength.
 * Calculation of neutron transmission spectrum of single crystal as a function of crystal structure, neutron energy, temerature, mosaic distribution, and crystal orientation. Accounts for various contributions to neutron scattering including, for example, diffraction and inelastic scattering (using incoherent approximation)
 * Modeling of texture:
   -3D Gaussian Distribution
-* Modeling of effect of strain:
+* Modeling of effect of strain on single grain and polycrystals:
   - macro strain
   - Voigt model
   - Reuss model
   - Eshelby-Kroner model
   - Hill Model
+  - 
 * Flexible design to allow future extension to texture, more complex stress-strain models, and peak profile models
 * Allow easy fitting to measured Bragg Edge data
 
