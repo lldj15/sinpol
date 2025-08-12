@@ -9,7 +9,6 @@ from sinpol import  stressstrainmodels as ss
 import matplotlib.pyplot as plt
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 warnings.filterwarnings("ignore")
-
 class TestScatteringCal():
     
     def test_singlecrystaldeg(self):
