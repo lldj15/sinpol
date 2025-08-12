@@ -3,12 +3,8 @@ import pytest
 import warnings
 import numpy as np
 from sinpol import crystaldata as cds
-
 warnings.simplefilter(action='ignore', category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
-
-
-
 class TestCrystalData():
     def test_crystaldatanruronic_cu(self):
         xtal=cds.CrystalData('Cu.cif')
