@@ -17,7 +17,7 @@ calculate neutron transmisison spectrum as a function of neutron wavelength.
   - 
 * Flexible design to allow future extension to texture, more complex stress-strain models, and peak profile models
 * Allow easy fitting to measured Bragg Edge data
-  ## Documentation
+## Documentation
 
 Please refer to  for documentation
 on installation, usage, and API.
