@@ -3,21 +3,31 @@ from math import log, floor, ceil, fmod
 import random
 from scipy.integrate import quad
 from mpmath import erfinv
+#import matlab.engine
 import numpy as np
 import matplotlib.pyplot as plt
+import tempfile
+from itertools import groupby, chain
 #pylint: disable=C0103
 #pylint: disable=C0200
-#pylint: disable=W0612
-#pylint: disable=W0613
-#pylint: disable=R0913
-#pylint: disable=R0902
-#pylint: disable=R0914
-#pylint: disable=R0915
+
 # pylint: disable=line-too-long
 def bunge(odf,tau):
     """
-        odf : 3d-matrix of orientation distribution angles 
-        tau: azimuthal angle
+     Parameters
+     - odf: ndarray, shape (N, 3)
+    Euler angles per row as [phi1, Phi, phi2] in radians.
+    Note: pass radians (use np.radians for degrees).
+    - tau: float
+    Azimuthal angle in the laboratory frame in degrees.
+
+    Returns
+    - bun: ndarray, shape (N, 3, 3)
+    Rotation matrices R = R_z(phi2) R_x(Phi) R_z(phi1) R_z(tau).
+
+    LaTeX
+    - R = R_z(\\phi_2) R_x(\\Phi) R_z(\\phi_1) R_z(\\tau).
+
     """
     rho=odf[:,2]
     psi=odf[:,1]
@@ -62,8 +72,19 @@ def bunge(odf,tau):
     return bun
 def indexomatirx(tr,tau):
     """
-        tr : matrix of  crystal index direction
-       
+           Parameters
+    - tr: array_like, shape (6,)
+        [h, k, l, u, v, w].
+    - tau: float
+        Azimuthal lab z-rotation in degrees.
+    
+    Returns
+    - orn: ndarray, shape (1, 3, 3)
+        Orientation matrix.
+    
+    Notes
+    - The constructed basis is right-handed and normalized.
+
     """
     tau=np.radians(tau)
     MM=(np.power(tr[0],2)+np.power(tr[1],2)+np.power(tr[2],2))
@@ -84,17 +105,97 @@ def indexomatirx(tr,tau):
     orn=np.dot(tex,rot_s)
     orn=orn[np.newaxis,:,:]
     return orn
+def section_file(file):
+    """
+    Parameters
+    - file: str
+        Path to file.
+    
+    Yields
+    - section: list[str]
+        One header line starting with '#' plus the data lines until the next header.
+    """
+
+    with open(file) as f:
+            grps = groupby(f, key=lambda x: x.lstrip().startswith("#"))
+            for k, v in grps:
+                if k:
+                    yield chain([next(v)], (next(grps)[1]))  
+
+def createMatlab(crys,fn,num,mtexpath,matlabpath): 
+    """
+          Parameters
+    - crys: list/ndarray of arrays
+        Each entry is a pole-figure array per reflection/section.
+    - fn: str
+        Crystal symmetry tag ('fcc', 'bcc', ...).
+    - num: int
+        Number of orientations.
+    - mtexpath: str
+        Path to MTEX toolbox folder.
+    - matlabpath: str
+        Path to MATLAB scripts folder (with p3/p4).
+    
+    Returns
+    - frame_data: any
+        Variable 'FrameData' from MATLAB workspace.
+    - name2: str
+        Path to temporary text file containing Euler angles (produced by MATLAB).
+    """
+    try:
+        import matlab.engine  # type: ignore
+    except Exception as e:
+        raise ImportError("MATLAB engine is required for createMatlab but is not available.") from e
+    
+    fna=[]
+    name="tmp"
+    for j in range (len(crys)):
+        ftmp = tempfile.NamedTemporaryFile(delete=False)
+        fnat = ftmp.name + ".txt"
+        np.savetxt(fnat, crys[j])
+        fna.append(fnat)
+    name2=tempfile.NamedTemporaryFile(delete=False).name +".txt"
+    eng = matlab.engine.start_matlab()
+    eng.addpath(mtexpath,nargout=0)
+    eng.startup_mtex(nargout=0)
+    eng.addpath(matlabpath,nargout=0)
+    eng.workspace['name']=name2
+    eng.workspace['number']=num
+    eng.workspace['fname'] = fna
+    if fn=='fcc':
+       eng.p3(nargout=0)
+    if fn=='bcc':
+       eng.p4(nargout=0)
+    eng.evalc('C = who;')
+    varnames = eng.workspace['C']
+    mvars = {}
+    for v in varnames:
+        mvars[v] = eng.workspace[v]
+
+#     os.remove(fna) 
+    eng.quit()
+    return mvars['FrameData'],name2
+
 class SampleData:
-    """Class calculates sample data parameters"""
+    """constructor
+    Parameters
+    ----------
+
+    - omg: float
+        Vertical angle in degrees.
+    - tau: float
+        Azimuthal angle in degrees (lab z-rotation).
+    - ptcm: float
+        Plate thickness in cm (converted to Å).
+    - grainsize: float
+        Grain size in microns (converted to Å).
+    - numg: int
+        Number of grain orientations (Orn).
+    - modev: float
+        Base mosaic spread parameter (typ. degrees).
+    """
     def __init__(self,omg,tau, ptcm,grainsize,numg,modev):
-        """constructor
-        Parameters
-        ----------
-        tau :  azimuthal angle in laboratory frame
-        omg :  vertical angle  in laboratory frame
-        ptcm  : plate thickness in  cm 
-        grainm  : grain size in microns
-        ncolumn : number of discretizes columns in the sample """
+        
         self.plate=ptcm*1e8   # convert plate from centimeters  to Angstroms
         self.grainsize=grainsize*1e4 # convert grain size from microns to angstroms
         self.Orn=int(numg) # total number of orientation
@@ -105,7 +206,14 @@ class SampleData:
         self.mos=self.MosaicDistribution(self.Orn,modev)
         self.odf=self.CreateDistribution(self.Orn)
     def singlecrystaldeg(self,phi1,Phi,phi2,name:str,name2:str,dev):
-        " Calculates orientation matrix from inputed Euler angles"
+        
+        """
+        Compute orientation matrix from Euler angles given in degrees.
+    
+        Returns
+        - robjt: object array [omb, omg_rad, grain_sizes, mosaic_radians, cols]
+        - omb: ndarray, shape (1, 3, 3)
+        """
         odf=np.array([[np.radians(phi1),np.radians(Phi),np.radians(phi2)]])
         omb=bunge(odf,self.tau)
         do=f"{name}"
@@ -115,37 +223,106 @@ class SampleData:
         robjt=np.array([omb,np.radians(self.omg),gs,nu,self.cols],dtype=object)
         return robjt,omb
     def singlecrystalhkl(self,tr,name:str,name2:str,dev):
-        """Calculates orientation matrix from inputed crystal plane and crystal direction"""
-        odf=indexomatirx(tr,self.tau)
+        """
+        Compute orientation matrix from input [h,k,l]/[u,v,w].
+    
+        Returns
+        - robjt: object array [omb, omg_rad, grain_sizes, mosaic_radians, cols]
+        - omb: ndarray, shape (1, 3, 3)
+        """
+        
+      
+       # odf=indexomatirx(tr,self.tau)
         omb=indexomatirx(tr,self.tau)#bunge(odf,self.tau)
         do=f"{name}"
         mo=f"{name2}"
         gs=getattr(self.gd, do)(0)
         nu=np.radians(getattr(self.mos, mo)(dev))
         robjt=np.array([omb,np.radians(self.omg),gs,nu,self.cols],dtype=object)
-        return robjt,odf
+        return robjt,omb
     def polycrystalrand(self,name:str,name2:str,gdev,mdev,seed):
-        "Calculate orientation matrix for a random texture polycrystal"
+        """
+        Generate random-texture polycrystal using Halton-based sampling.
+    
+        Returns
+        - robjt: object array [omb, omg_rad, grain_sizes, mosaic_radians, cols]
+        - eulers: ndarray, shape (Orn, 3) in radians
+        """
+        eulers=self.odf.random(seed)
         omb=bunge(self.odf.random(seed),self.tau)
         do=f"{name}"
         mo=f"{name2}"
         gs=getattr(self.gd, do)(gdev)
         nu=np.radians(getattr(self.mos, mo)(mdev))
         robjt=np.array([omb,np.radians(self.omg),gs,nu,self.cols],dtype=object)
-        return robjt,self.odf.random(seed)
+        return robjt,eulers
     def polycrystalGauss(self,bv,tr,name:str,name2:str,gdev,mdev):
-        "Calculate orientation matrix for a textured polycrystal"
+        """
+        Generate textured polycrystal with Gaussian spread about [hkl]/[uvw].
+    
+        Returns
+        - robjt: object array [omb, omg_rad, grain_sizes, mosaic_radians, cols]
+        - eulers: ndarray, shape (Orn, 3) in radians
+        """
+        
+        eulers=self.odf.texturegaussian(bv,tr)
         omb=bunge(self.odf.texturegaussian(bv,tr),self.tau)
         do=f"{name}"
         mo=f"{name2}"
         gs=getattr(self.gd, do)(gdev)
         nu=np.radians(getattr(self.mos, mo)(mdev))
         robjt=np.array([omb,np.radians(self.omg),gs,nu,self.cols],dtype=object)
-        return robjt,self.odf.texturegaussian(bv,tr)
-    def polycrystalMatlab(self):
-        "to be done"
+        return robjt,eulers
+    def polycrystalloadodf(self,name:str,name2:str,gdev,mdev,file='.txt'):
+        """
+        Load Euler angles (degrees) from ODF file and build orientation matrices.
+    
+        Returns
+        - robjt: object array [omb, omg_rad, grain_sizes, mosaic_radians, cols]
+        - odf_deg: ndarray, shape (Orn, 3) in degrees
+        """
+            
+        
+        odf=np.loadtxt(file)
+        odf=odf[:self.Orn,:]
+        omb=bunge(np.radians(odf),self.tau)
+        do=f"{name}"
+        mo=f"{name2}"
+        gs=getattr(self.gd, do)(gdev)
+        nu=np.radians(getattr(self.mos, mo)(mdev))
+        robjt=np.array([omb,np.radians(self.omg),gs,nu,self.cols],dtype=object)
+        return robjt,odf
+    def polycrystalfrompolefigures(self,name:str,name2:str,gdev,mdev,crys,mtex,pamath,fi):
+        """
+        Compute orientation matrices from pole figures via MATLAB/MTEX.
+    
+        Returns
+        - robjt: object array [omb, omg_rad, grain_sizes, mosaic_radians, cols]
+        - odf_deg: ndarray, shape (Orn, 3) in degrees
+        """
+        secs=[]                 
+        for sec in section_file(fi):
+            secs.append(list(sec))
+        
+        secs=np.asanyarray(secs)
+        secs=secs[:,1:]
+        poles=np.zeros([secs.shape[0],secs.shape[1],3])
+        for i in range(len(secs)):
+            for j in range (len(secs[i])):
+                a=np.fromstring(secs[i,j], sep='\t')
+                poles[i,j]=a
+        ipf,orie=createMatlab(poles,crys,self.Orn,mtex,pamath)
+        
+        odf=np.loadtxt(orie,skiprows=4)
+        omb=bunge(np.radians(odf),self.tau)
+        do=f"{name}"
+        mo=f"{name2}"
+        gs=getattr(self.gd, do)(gdev)
+        nu=np.radians(getattr(self.mos, mo)(mdev))
+        robjt=np.array([omb,np.radians(self.omg),gs,nu,self.cols],dtype=object)
+        return robjt,odf
     class CreateDistribution:
-        """ Class to create Orientation Distribution """
+        """Create orientation distributions (random, textured)."""
         def __init__(self, onumb):
             """constructor
             Parameters
@@ -153,7 +330,17 @@ class SampleData:
             onumb : number  of  crystal orientation"""
             self.onumb=onumb
         def halton(self,  dim ,loc):
-            """  Calculates Halton distirbution  base on seed"""
+            
+            """
+            Generate a Halton-like sequence.
+    
+            Parameters
+            - dim: int
+            - loc: int
+    
+            Returns
+            - h: ndarray, shape (onumb, dim), values in [0, 1).
+            """
             nbpts=int(self.onumb)
             h = np.empty(nbpts * dim)
             h.fill(np.nan)
@@ -175,7 +362,12 @@ class SampleData:
                     h[j * dim + i] = sum_
             return h.reshape(nbpts, dim)
         def random(self,x):
-            """ Create random distribution"""
+            """
+            Create random Euler angles (radians) with uniform φ1, φ2 in [0, 2π] and cos Φ in [−1, 1].
+    
+            Returns
+            - yss: ndarray, shape (onumb, 3), radians.
+            """
             Onum=int(self.onumb)
             ys = np.array(self.halton(3, x))
             xx = (ys[:, 0] * 2 * np.pi)
@@ -187,28 +379,60 @@ class SampleData:
             yss=np.hstack((xx,yy,zz))
             return yss
 
-        def AsympBessel(self,alp, s):
-            """ Asymp Bessel  """
+        def asympBessel(self,alp, s):
+            """
+            Asymptotic Bessel-like factor used for normalization.
+
+            Returns
+            - value: float
+            value = exp(s) / sqrt(2 π s) × [1 − (4α^2 − 1)/(8s) + (4α^2 − 1)(4α^2 − 9)/(2·(8s)^2)− (4α^2 − 1)(4α^2 − 9)(4α^2 − 25)/(6·(8s)^3)].
+        """
             value= (np.exp(s)/np.power(2*np.pi*s,.5))*(1-((4*np.power(alp,2)-1)/(8*s))+((4*np.power(alp,2)-1)*(4*np.power(alp,2)-9))/(2*np.power(8*s,2))-((4*np.power(alp,2)-1)*(4*np.power(alp,2)-9)*(4*np.power(alp,2)-25))/(6*np.power(8*s,3)))
             return value
-        def Matthies(self,z,bb):
-            """  Texture Calculation """
+        def matthies(self,z,bb):
+            """
+            Matthies texture kernel.
+    
+            Returns
+            - val: float
+              val = exp(−ln 2 · z^2) · z^2 / sqrt(1 − sin^2(b/4) · z^2).
+            """
             b=bb
             val=np.exp(-np.log(2)*np.power(z,2))*np.power(z,2)/(np.power(1-np.power(np.sin(.25*b)*z,2),.5))
             return val
-        def Indexfinder(self,a,value):
-            """ Finder """
+        def indexfinder(self,a,value):
+            """
+            Find indices i, i+1 s.t. a[i] <= value < a[i+1]. Clamped to array range.
+    
+            Parameters
+            - a: array_like (monotonic increasing)
+            - value: float
+    
+            Returns
+            - i, j: int
+            """
             b=a[a>value].min()
             c=a[a<value].max()
             minidx=np.where(a==c)
             maxidx=np.where(a==b)
             return minidx[0][0],maxidx[0][0]
         def texturegaussian(self,bv,tr):
-            """Create orientation distribution function of base on a gaussian distribution
-              :param bv: std deviation of.
-              :type bv: :class:`float`
-              :param tr: 1*6 array represent hkl plane and uvw direction
-              :returns: :3d array -- orientation distribution"""
+            """
+            Sample Euler angles (radians) from a Gaussian texture about [hkl]/[uvw].
+    
+            Parameters
+            - bv: float
+               Angular spread in degrees (FWHM-like).
+            - tr: ndarray, shape (6,)
+               [h, k, l, u, v, w].
+    
+            Returns
+            - yss: ndarray, shape (onumb, 3)
+               Euler angles [phi1, Phi, phi2] in radians.
+    
+            LaTeX
+            - S = \\frac{\\ln 2}{2 \\sin^2(b/4)}, with b in radians.
+           """
             orn=self.onumb
             b = np.radians(bv)
             S = np.log(2.0) / (2.0 * np.power(np.sin(b / 4.0), 2))
@@ -218,9 +442,9 @@ class SampleData:
             z=np.zeros([len(wr),1])
             z=np.sin(.5*wr)/np.sin(.25*b)
             warr=np.zeros([len(z),1])
-            nms=1/(self.AsympBessel(0, S)-self.AsympBessel(1, S))
+            nms=1/(self.asympBessel(0, S)-self.asympBessel(1, S))
             for i in range(len(z)):
-                intg,errint=quad(self.Matthies,0,z[i],b)
+                intg,errint=quad(self.matthies,0,z[i],b)
                 warr[i]=nms*np.exp(S)*np.power(2*np.sin(.25*b),3)*intg/(2*np.pi)
             MM=(np.power(tr[0],2)+np.power(tr[1],2)+np.power(tr[2],2))
             M=np.sqrt(MM)
@@ -239,7 +463,7 @@ class SampleData:
             texrot=np.zeros([orn,3,3])
             for j in range (orn):
                 xs=np.random.rand()
-                minv,maxv=self.Indexfinder(warr,xs)
+                minv,maxv=self.indexfinder(warr,xs)
                 zx=z[minv]
                 w=2*np.arcsin(zx*np.sin(b/4))
                 qh=np.random.rand()

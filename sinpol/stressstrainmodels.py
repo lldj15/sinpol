@@ -2,19 +2,44 @@
 import math as ma
 import numpy as np
 
-#pylint: disable=R0913
-#pylint: disable=R0902
-#pylint: disable=C0103
-#pylint: disable=C0200
+
 #pylint: disable=R0914
 # pylint: disable=line-too-long
 def volume(a, b, c, alp, bet, gam):
     """Calculates Volume."""
+    
+    
     thetsqrtv = ma.pow(ma.cos(ma.radians(alp)),2) + ma.pow(ma.cos(ma.radians(bet)),2)+ma.pow(ma.cos(ma.radians(gam)),2)-2*ma.cos(ma.radians(alp)) * ma.cos(ma.radians(bet))*ma.cos(ma.radians(gam))
     vol = a * b * c * ma.sqrt(1 - thetsqrtv)
     return vol
 def dhkl(a, b, c, alp, bet, gam, h, k, l, vol):
-    """Calculates lattice spacing."""
+    """Calculates lattice spacing.
+    Parameters
+    ----------
+    - a, b, c: float
+        Lattice constants in Å.
+    - alp, bet, gam: float
+        Unit-cell angles in degrees (α, β, γ respectively).
+    - h, k, l: array_like of float or int, broadcastable to same shape
+        Miller indices for the planes.
+    - vol: float
+        Unit cell volume in Å^3 (as returned by volume()).
+    
+    Returns
+    ----------
+    - d: ndarray
+        Interplanar spacing d_{hkl} in Å, same shape as h/k/l.
+    
+    Notes
+    ----------
+    - For a triclinic cell, the general expression is:
+      1/d^2 = (h^2 b^2 c^2 sin^2 α + k^2 a^2 c^2 sin^2 β + l^2 a^2 b^2 sin^2 γ
+               + 2 h k a b c^2 (cos α cos β - cos γ)
+               + 2 k l a^2 b c (cos β cos γ - cos α)
+               + 2 h l a b^2 c (cos α cos γ - cos β)) / V^2
+      Then d = V / sqrt(denominator).
+    """
+
     hbc = np.power(h, 2) * np.power(b, 2) * np.power(c, 2) * np.power(np.sin(np.radians(alp)), 2)
     kac = np.power(k, 2) * np.power(a, 2) * np.power(c, 2) * np.power(np.sin(np.radians(bet)), 2)
     lab = np.power(l, 2) * np.power(a, 2) * np.power(b, 2) * np.power(np.sin(np.radians(gam)), 2)
@@ -28,14 +53,49 @@ def dhkl(a, b, c, alp, bet, gam, h, k, l, vol):
     d =vol/np.power(den,.5)
     return d
 def gammacal(hk):
-    """Calculates gamma coefficient."""
+    """Calculates gamma coefficient.
+    Parameters
+    - hk: ndarray, shape (Nrefl, 3)
+        Miller indices per row [h, k, l].
+    
+    Returns
+    - gamma: ndarray, shape (Nrefl,)
+        γ = (h^2 k^2 + k^2 l^2 + h^2 l^2) / (h^2 + k^2 + l^2)^2.
+    
+    Notes
+    - In LaTeX: \\gamma = \\dfrac{h^2 k^2 + k^2 l^2 + h^2 l^2}{(h^2 + k^2 + l^2)^2}.
+    - For (h, k, l) = (0, 0, 0), returns 0 to avoid division by zero.
+"""
     num=np.square(hk[:,0])*np.square(hk[:,1])+np.square(hk[:,1])*np.square(hk[:,2])+np.square(hk[:,0])*np.square(hk[:,2])
     den=np.square(np.square(hk[:,0])+np.square(hk[:,1])+np.square(hk[:,2]))
     return num/den
 class StressStrainModels:
-    """Class different stress strain models"""
+    """Class different stress strain models
+        Parameters
+    - bunge: ndarray, shape (Ngrains, 3, 3)
+        Orientation (rotation) matrices per grain.
+    - hkl: ndarray, shape (Nrefl, 3)
+        Miller indices.
+    - lattice: ndarray, shape (1, 6)
+        [a, b, c, α, β, γ] with angles in degrees.
+    - stress: ndarray, shape (6, 1) or (6,)
+        Applied macroscopic stress in Voigt order [σ11, σ22, σ33, σ23, σ13, σ12].
+        Units must be consistent with stiffness coefficients to produce dimensionless strains.
+    - c11, c12, c44: float
+        Single-crystal stiffness coefficients (e.g., GPa).
+    
+    Attributes
+    - samplec: ndarray, shape (Nrefl, Ngrains, 3)
+        Scattering direction vectors (per hkl, per grain) in the sample frame.
+    - lathkl: ndarray, shape (Nrefl,)
+        d_{hkl} in Å.
+    - hklmag: ndarray, shape (Nrefl, 1)
+        |G| ∝ c / d_{hkl} (used as a magnitude to normalize scattering direction).
+    - c11p, c12p, c44p: float
+        Popa’s isotropized stiffnesses for the Voigt model.
+"""
     def __init__(self,bunge,hkl,lattice, stress,c11,c12,c44):
-        """constructor
+        """construct  the precompute geometry
         Parameters
         ----------
         bunge : orientation matrices
@@ -61,7 +121,19 @@ class StressStrainModels:
     def voigt(self):
         """Calculates Voigt strain from a stress matrix using the model by Popa ,
          see reference https://doi.org/10.1107/97809553602060000967
-         Return: 2d array of number of grain orientation and number of lattice planes
+         Returns
+    - vstrain: ndarray, shape (Ngrains, Nrefl)
+        Projected strains along the scattering directions.
+
+    Method
+    - Popa’s isotropized stiffnesses (c'_{11}, c'_{12}, c'_{44}) -> Voigt compliances:
+      s_{11}^V = (c'_{11} + c'_{12}) / [(c'_{11} - c'_{12})(c'_{11} + 2c'_{12})],
+      s_{12}^V = -c'_{12} / [(c'_{11} - c'_{12})(c'_{11} + 2c'_{12})],
+      s_{44}^V = 1 / (4 c'_{44}).
+    - Strain in Voigt notation: ε^V = S^V σ.
+    - Projection with n = (B1, B2, B3):
+      ε_{hkl} = B1^2 ε_{11} + B2^2 ε_{22} + B3^2 ε_{33}
+                + 2 B2 B3 ε_{23} + 2 B1 B3 ε_{13} + 2 B1 B2 ε_{12}. 
         """
         s11v=(self.c11p+self.c12p)/((self.c11p-self.c12p)*(self.c11p+2*self.c12p))
         s12v=-self.c12p/((self.c11p-self.c12p)*(self.c11p+2*self.c12p))
@@ -78,8 +150,22 @@ class StressStrainModels:
     def reuss(self):
         """Calculates Reuss strain from a stress matrix using the model by Popa , 
         see reference https://doi.org/10.1107/97809553602060000967.
-        ::Return: 2d array of number of grain orientation and number of lattice planes
-        """
+        Returns
+        - rstrain: ndarray, shape (Ngrains, Nrefl)
+            Projected strains along the scattering directions.
+    
+        Method
+        - Reuss compliances:
+          s_{11} = (c_{11} + c_{12}) / [(c_{11} - c_{12})(c_{11} + 2c_{12})],
+          s_{12} = -c_{12} / [(c_{11} - c_{12})(c_{11} + 2c_{12})],
+          s_{44} = 1 / (4 c_{44}).
+        - Rotate stress σ to the crystal frame with a 6×6 Q-matrix built from a_{ij} (rotation),
+          apply ε = S σ in the crystal frame.
+        - Project along reciprocal direction A (normalized by |G|):
+          A = [h^2, k^2, l^2, 2kl, 2hl, 2hk] / |G|^2,
+          and ε_{hkl} = A · ε.
+    """
+       
         s11=(self.c11+self.c12)/((self.c11-self.c12)*(self.c11+2*self.c12))#Reuss
         s12=-self.c12/((self.c11-self.c12)*(self.c11+2*self.c12))#Reuss
         s44=1/self.c44/4
@@ -111,14 +197,37 @@ class StressStrainModels:
     def hill (self):
         """Calculates Hill strain from a stress matrix using the model by Popa , 
         see reference https://doi.org/10.1107/97809553602060000967.
-        Return: 2d array of number of grain orientation and number of lattice planes
+        Hill strain projection as an average of Voigt and Reuss.
+
+        Returns
+        - hstrain: ndarray, shape (Ngrains, Nrefl)
+            ε^H_{hkl} = (ε^V_{hkl} + ε^R_{hkl}) / 2.
         """
+
         return (self.reuss()+self.voigt())/2.0
     def kronerrandom(self):
         """Calculates Eshelby-Kroner strain from a stress matrix using the model by Popa , 
         see reference https://doi.org/10.1107/97809553602060000967.
-         Return: 2d array of number of grain orientation and number of lattice planes
+        
+
+        
+      
+        Returns
+        - kstrain: ndarray, shape (Ngrains, Nrefl)
+            Projected strains along the scattering directions.
+      
+        Method sketch
+        - From Reuss compliances s_{11}, s_{12}, s_{44}:
+          K = 1 / [3 (s_{11} + 2 s_{12})], μ_k = 1 / s_{44}, ν_k = 1 / [2 (s_{11} - s_{12})],
+          r = μ_k / ν_k.
+        - Define coefficients (as in the code): α_V, β_V, γ_V and their γ-weighted forms.
+        - For each (h, k, l), compute γ = (h^2 k^2 + k^2 l^2 + h^2 l^2)/(h^2 + k^2 + l^2)^2.
+          Form the cubic coefficients and select the largest root G.
+        - Effective compliances:
+          s_{12}^K = 1/(9K) - 1/(6G), s_{11}^K = s_{12}^K + 1/(2G), s_{44}^K = 0.
+        - Compute ε^K = S^K σ and project with n = (B1, B2, B3) as in Voigt.
         """
+
         s11=(self.c11+self.c12)/((self.c11-self.c12)*(self.c11+2*self.c12))#Reuss
         s12=-self.c12/((self.c11-self.c12)*(self.c11+2*self.c12))#Reuss
         s44=1/self.c44
@@ -153,3 +262,61 @@ class StressStrainModels:
             kroenerstrain=np.dot(smatrix,self.stress)
             kstrain[i,:]=np.power(B1[i,:],2)*kroenerstrain[0,0]+np.power(B2[i,:],2)*kroenerstrain[1,0]+np.power(B3[i,:],2)*kroenerstrain[2,0]+2*B2[i,:]*B3[i,:]*kroenerstrain[3,0]+2*B1[i,:]*B3[i,:]*kroenerstrain[4,0]+2*B1[i,:]*B2[i,:]*kroenerstrain[5,0]# kroener conribution of the strain
         return kstrain.T
+class StrainStrainModels:
+    """Class strain models
+      Parameters
+    - bunge: ndarray, shape (Ngrains, 3, 3)
+        Orientation matrices (currently unused, kept for symmetry).
+    - hkl: ndarray, shape (Nrefl, 3)
+        Miller indices (unused here).
+    - strain: ndarray, shape (6,) or (6, 1)
+        Macroscopic strain in Voigt order: [ε11, ε22, ε33, ε23, ε13, ε12].
+    - omega: float
+        Vertical angle in degrees.
+    - psi: float
+        Azimuthal angle in degrees.
+    """
+     
+    
+    
+    def __init__(self,bunge,hkl,strain,omega,psi):
+        """construct the model
+        Parameter
+        ----------
+        bunge : orientation matrices
+        hkl :  miller index
+        psi:  azimuthal angle in laboratory frame
+        omg :  vertical angle  in laboratory frame
+        strain : strain matrix"""
+        self.bunge=bunge
+        self.hkl=hkl 
+        self.Es=strain
+        self.omega=omega
+        self.psi=psi
+    def macstrain(self):
+        """Compute macroscopic projected strain ε(ω, ψ) and tile over grains/reflections.
+
+        Returns
+        - Ematrix: ndarray, shape (Ngrains, Nrefl)
+            Matrix filled with the scalar ε(ω, ψ).
+    
+        Formula
+        - With E = [ε11, ε22, ε33, ε23, ε13, ε12] and angles in degrees:
+          ε(ω, ψ) =
+          ε11 cos^2 ψ sin^2 ω + ε22 sin^2 ψ + ε33 cos^2 ω cos^2 ψ
+          + ε23 sin(2ψ) cos ω + ε13 cos^2 ψ sin(2ω) + ε12 sin(2ψ) sin ω.
+        - In LaTeX:
+          \\varepsilon(\\omega, \\psi) =
+          \\varepsilon_{11}\\cos^2\\psi\\sin^2\\omega + \\varepsilon_{22}\\sin^2\\psi
+          + \\varepsilon_{33}\\cos^2\\omega\\cos^2\\psi
+          + \\varepsilon_{23}\\sin(2\\psi)\\cos\\omega
+          + \\varepsilon_{13}\\cos^2\\psi\\sin(2\\omega)
+          + \\varepsilon_{12}\\sin(2\\psi)\\sin\\omega.
+   """
+        E=self.Es[0]* np.power(np.cos(np.radians(self.psi)), 2) * np.power(np.sin(np.radians(self.omega)), 2) + self.Es[1]* np.power(np.sin(np.radians(self.psi)),2) +self.Es[2]* np.power(np.cos(np.radians(self.omega)), 2)* np.power(np.cos(np.radians(self.psi)), 2)+ self.Es[3] * np.sin(2.0 * np.radians(self.psi)) * np.cos(np.radians(self.omega)) + self.Es[4]* np.power(np.cos(
+        np.radians(self.psi)),2) * np.sin(2.0 * np.radians(self.omega)) + self.Es[5] * np.sin(2*np.radians(self.psi)) * np.sin(np.radians(self.omega))
+        Ematrix=np.zeros([len(self.bunge), len(self.hkl)])
+        Ematrix[:,:]=E[0]
+        return Ematrix 
+        
+    
