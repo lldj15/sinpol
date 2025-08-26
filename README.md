@@ -30,9 +30,9 @@ Please clone the repository, make changes and make a pull request.
 
 **How to report issues**
 
-Please use to report issues or bug reports.
+Please use [the github issues](https://github.com/lldj15/sinpol/issues) to report issues or bug reports.
 
 **Support**
 
-Please either use  to ask for support, or contact the authors directly using email.
+Please either use [the github issues](https://github.com/lldj15/sinpol/issues) to ask for support, or contact the author directly using email.
 
