@@ -19,7 +19,7 @@ calculate neutron transmisison spectrum as a function of neutron wavelength.
 * Allow easy fitting to measured Bragg Edge data
 ## Documentation
 
-Please refer to  for  ([documentation
+Please refer to  for [documentation
 ](https://sinpol.readthedocs.io/en/latest/) on installation, usage, and API.
 
 ## Community guidelines
