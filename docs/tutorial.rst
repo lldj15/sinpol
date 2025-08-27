@@ -2,7 +2,6 @@
 Tutorial
 ========
 
-Please see :ref:`installation` before start here.
 
 
 
