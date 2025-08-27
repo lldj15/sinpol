@@ -3,8 +3,10 @@ import pytest
 import warnings
 import numpy as np
 from sinpol import sampledata as sd
+
 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
 warnings.filterwarnings("ignore")
+
 class TestSampleData():
     
     def test_singlecrystaldeg(self):
@@ -80,14 +82,14 @@ class TestSampleData():
         # gsd.GrainSizeDistribution(1,1,1).singlecrystal()
         assert tt==1e8
 
-    def test_grain_uniform(self):
+    def test_grainuniform(self):
         ptcm=1 # in cm
         grainsize=1 # in microns
         orn=10000
         cols=int(np.ceil(orn*grainsize/(ptcm*1e8)))
         tt=sd.SampleData(0,0,ptcm,grainsize,orn,.2).gd.uniform(1)
         assert np.isclose(tt, np.ones([10000,1])*1e4).all()
-    def test_grain_lognormal(self):
+    def test_grainlognormal(self):
         ptcm=1 # in cm
         grainsize=1 # in microns
         orn=10000
@@ -144,13 +146,13 @@ class TestSampleData():
         assert tt[0]==762
         assert tt[1] ==763             
       
-    def test_orientmatrix_single(self):
+    def test_orientmatrixsingle(self):
         odf=np.array(np.radians([[0,54,45]]))
         tarr=np.zeros([1,3,3])
         bmat=sd.bunge(odf,0)
        
         assert bmat.shape ==tarr.shape
-    def test_orientmatrices_poly(self):
+    def test_orientmatricespoly(self):
         ptcm=1 # in cm
         grainsize=1 # in microns
         orn=10000
