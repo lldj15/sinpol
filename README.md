@@ -19,12 +19,17 @@ calculate neutron transmisison spectrum as a function of neutron wavelength.
 * Allow easy fitting to measured Bragg Edge data
 
 ## Installation
-pip install sinpol-transmission
-## Documentation
+# macOS/Linux
+curl -fsSL https://pixi.sh/install.sh | bash
 
-Please refer to  for [documentation
-](https://sinpol.readthedocs.io/en/latest/) on installation, usage, and API.
+# Windows
+iwr -useb https://pixi.sh/install.ps1 | iex
+# Clone the repository
+git clone https://github.com/lldj15/sinpol.git
+cd sinpol
 
+# Activate Pixi environment
+pixi shell
 ## Community guidelines
 
 **How to contribute**
