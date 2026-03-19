@@ -19,20 +19,20 @@ calculate neutron transmisison spectrum as a function of neutron wavelength.
 * Allow easy fitting to measured Bragg Edge data
 
 ## Installation
-# macOS/Linux
+#### macOS/Linux
 ```bash
 curl -fsSL https://pixi.sh/install.sh | bash
 ```
-# Windows
+#### Windows
 ```bash
 iwr -useb https://pixi.sh/install.ps1 | iex
 ```
-# Clone the repository
+#### Clone the repository
 ```bash
 git clone https://github.com/lldj15/sinpol.git
 cd sinpol
 ```
-# Activate Pixi environment
+#### Activate Pixi environment
 ```bash
 pixi shell
 ```
