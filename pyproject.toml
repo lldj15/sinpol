@@ -65,7 +65,7 @@ push = true
 
 [tool.pixi.workspace]
 channels = ["conda-forge"]
-platforms = ["osx-64"]
+platforms = ["osx-64", "osx-arm64", "linux-64"]
 [tool.pixi.dependencies]
 python = ">=3.10,<3.11"
 pip = "*"
