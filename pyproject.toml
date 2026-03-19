@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sinpol-transmission"
-version = "0.0.10"
+version = "1.1"
 description = "Single crystal to polycrystal neutron trasnmission and diffraction simulation engine"
 readme = "README.md"
 authors = [{ name = "Luc Dessieux", email = "Dessieuxll@ornl.gov" }]
@@ -26,7 +26,7 @@ dependencies = [
     "numba",
     "numba-mpi",
     "ase",
-    "matlabengine",
+
   
     
 
@@ -35,7 +35,7 @@ requires-python = ">=3.10"
 
 [project.optional-dependencies]
 dev = [ "black", "bumpver", "isort", "pip-tools", "pytest"]
-
+matlab=["sinpol-transmission",]
 [project.urls]
 Homepage = "https://github.com/lldj15/sinpol"
 
@@ -62,3 +62,30 @@ push = true
     "{pep440_version}",
 ]
 
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["osx-64"]
+[tool.pixi.dependencies]
+python = ">=3.10,<3.11"
+pip = "*"
+numba = "*"
+cctbx ="*"
+"diffpy.structure" ="*"
+cmake = "3.18.*"
+c-compiler = "*"
+cxx-compiler = "*"
+ninja = "*"
+h5py = ">=3.13.0,<4"
+[package.build.config]
+# Set explicit CMake args for building the package
+extra-args = ["-DCMAKE_BUILD_TYPE=Release", "-DENABLE_TESTING=OFF"]
+[tool.pixi.pypi-dependencies]
+sinpol-transmission = { path = ".", editable = true }
+NumbaQuadpack = { git = "https://github.com/Nicholaswogan/NumbaQuadpack.git" }
+[tool.pixi.environments]
+default = { solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
+matlab = { features = ["matlab"], solve-group = "default" }
+
+[tool.pixi.tasks]
