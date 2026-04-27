@@ -17,7 +17,7 @@ affiliations:
   - name: "Neutron Scattering Division, Oak Ridge National Laboratory"
     index: 1
 date: "May 2025"
-bibliography: paper.bib
+bibliography: docs/paper.bib
 ---
 
 # Summary
